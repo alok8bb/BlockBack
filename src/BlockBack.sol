@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-contract CrowdFunding {
+contract BlockBack {
     uint public counter;
 
     constructor() {
@@ -27,7 +27,7 @@ contract CrowdFunding {
 
     mapping(address => Campaign[]) private ownerToCampaigns;
     mapping(uint => Campaign) private idToCampaign;
-    mapping(address => Contribution) private contributionToContributor;
+    mapping(address => Contribution[]) private contributionToContributor;
 
     function getCampaign(
         address _address
@@ -39,7 +39,7 @@ contract CrowdFunding {
         return idToCampaign[id];
     }
 
-    function getContributions() public view returns (Contribution memory) {
+    function getContributions() public view returns (Contribution[] memory) {
         return contributionToContributor[msg.sender];
     }
 
@@ -87,9 +87,11 @@ contract CrowdFunding {
         );
 
         campaign.raisedAmount += msg.value;
-        contributionToContributor[msg.sender] = Contribution({
-            id: campaign.id,
-            amount: msg.value
-        });
+        Contribution[] storage _contributions = contributionToContributor[
+            msg.sender
+        ];
+
+        _contributions.push(Contribution({id: campaign.id, amount: msg.value}));
+        contributionToContributor[msg.sender] = _contributions;
     }
 }
