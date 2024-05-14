@@ -13,3 +13,21 @@ body {
     text-wrap: balance;
   }
 }
+
+input:focus, input.form-control:focus {
+    outline:none !important;
+    outline-width: 0 !important;
+    box-shadow: none;
+    -moz-box-shadow: none;
+    -webkit-box-shadow: none;
+}
+
+@layer base {
+    input[type='number']::-webkit-outer-spin-button,
+    input[type='number']::-webkit-inner-spin-button,
+    input[type='number'] {
+      -webkit-appearance: none;
+      margin: 0;
+      -moz-appearance: textfield !important;
+    }
+ }

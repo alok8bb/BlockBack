@@ -6,7 +6,7 @@ export default function Home() {
       <Navbar />
       <div className="lg:w-[70%] self-center w-full">
         <div className="flex flex-row gap-4 text-3xl font-bold">
-          <h1 className="text-accent-300 hover:cursor-pointer">On-going</h1>
+          <h1 className="text-accent-300 hover:cursor-pointer">Ongoing</h1>
           <h1 className="text-gray-500 hover:cursor-pointer">Finished</h1>
         </div>
         <div className="my-4 flex w-full gap-4">

@@ -24,6 +24,7 @@ const config: Config = {
         },
         magic: {
           gray: "#111111",
+          "gray-2": "#0a0a0a",
         },
       },
       fontFamily: {
