@@ -6,8 +6,9 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { Formik, FormikErrors } from "formik";
-import { ReactNode } from "react";
+import { Formik, FormikErrors, useFormik, withFormik } from "formik";
+import { ReactNode, useState } from "react";
+import toast from "react-hot-toast";
 
 const FundCategories = [
   "Technology",
@@ -29,6 +30,7 @@ interface NewCampaignFormValue {
   website?: string;
   twitter?: string;
   deadline: string | number;
+  cover?: File;
 }
 
 export default function NewCampaign() {
@@ -42,7 +44,10 @@ export default function NewCampaign() {
     deadline: "",
   };
 
-  const onSubmit = (
+  const [coverURL, setCoverURL] = useState("");
+  const [dataHash, setDataHash] = useState("");
+
+  const onSubmit = async (
     values: NewCampaignFormValue,
     { setSubmitting }: { setSubmitting: (setSubmitting: boolean) => void }
   ) => {
@@ -54,6 +59,36 @@ export default function NewCampaign() {
       maxAmount: values.maxAmount === "" ? 10 : values.maxAmount,
       minAmount: values.minAmount === "" ? 0.0001 : values.minAmount,
     };
+
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(values));
+    formData.append("cover_image", values.cover!);
+
+    try {
+      const res = await fetch(process.env.SERVER_URL + "/data/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const json: {
+          hash: string;
+        } = await res.json();
+        setDataHash(json.hash);
+      } else {
+        throw new Error("server error!");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Oops, something went wrong, please try again later!");
+      return;
+    }
+
+    toast("Initiating Transaction Window", {
+      icon: "👛",
+    });
+
+    // create web3 transaction here
 
     setSubmitting(false);
   };
@@ -75,6 +110,10 @@ export default function NewCampaign() {
             validate={(values) => {
               const errors: FormikErrors<NewCampaignFormValue> = {};
 
+              if (!values.cover) {
+                errors.cover = "Please select a cover image for the campaign";
+              }
+
               if (!values.title) {
                 errors.title = "Title is required";
               }
@@ -83,12 +122,12 @@ export default function NewCampaign() {
                 errors.description = "Description is required";
               }
 
-              if (!values.goalAmount || values.goalAmount <= 0) {
-                errors.goalAmount = "Total goal amount must be greater than 0";
-              }
-
               if (!values.deadline) {
                 errors.deadline = "Please specify valid deadline";
+              }
+
+              if (!values.goalAmount || values.goalAmount <= 0) {
+                errors.goalAmount = "Total goal amount must be greater than 0";
               }
 
               try {
@@ -116,11 +155,44 @@ export default function NewCampaign() {
               isSubmitting,
               handleChange,
               handleBlur,
+              setFieldValue,
             }) => (
               <form
                 onSubmit={handleSubmit}
                 className="flex flex-col gap-4 w-full mt-4"
               >
+                <InputLayout>
+                  <label className={`${labelStyles}`} htmlFor="cover">
+                    Cover Image
+                  </label>
+                  <img
+                    className="w-full max-h-80 object-cover rounded-lg"
+                    src={coverURL}
+                    alt=""
+                  />
+                  <input
+                    id="file"
+                    name="cover"
+                    className={`${inputStyles} p-2`}
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      if (event.currentTarget && event.currentTarget.files) {
+                        setFieldValue("cover", event.currentTarget.files[0]);
+                        var reader = new FileReader();
+                        reader.onload = function (event) {
+                          if (event.target) {
+                            var imageUrl = event.target.result as string;
+                            setCoverURL(imageUrl ?? imageUrl);
+                          }
+                        };
+
+                        reader.readAsDataURL(event.currentTarget.files[0]);
+                      }
+                    }}
+                  />
+                  {errors.cover && <ErrorText>{errors.cover}</ErrorText>}
+                </InputLayout>
                 <InputLayout>
                   <label className={`${labelStyles}`} htmlFor="title">
                     Title

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Hanken_Grotesk, Inter } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,6 +30,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${hankenGrotesk.variable} flex h-auto flex-col px-20 font-body pb-5`}
       >
+        <div>
+          <Toaster position="bottom-right" reverseOrder={false} />
+        </div>
         {children}
       </body>
     </html>
