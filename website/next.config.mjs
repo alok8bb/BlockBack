@@ -11,7 +11,12 @@ const nextConfig = {
         ],
     },
     env: {
-        SERVER_URL: process.env.SERVER_URL
+        SERVER_URL: process.env.SERVER_URL,
+        WEB3_MODAL_PROJECT_ID: process.env.WEB3_MODAL_PROJECT_ID
+    },
+    webpack: config => {
+        config.externals.push('pino-pretty', 'lokijs', 'encoding')
+        return config
     }
 };
 

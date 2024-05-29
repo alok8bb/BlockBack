@@ -76,7 +76,6 @@ router.post("/data/upload", async (ctx) => {
     const filePath = join(
       IMAGE_DIR + fileId + "." + image.name.split(".").pop()
     );
-    console.log(image.size);
     if (image.size >= 10000000) {
       ctx.response.status = 400;
       ctx.response.body = {

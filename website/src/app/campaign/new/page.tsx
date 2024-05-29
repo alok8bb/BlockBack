@@ -6,7 +6,7 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { Formik, FormikErrors, useFormik, withFormik } from "formik";
+import { Formik, FormikErrors } from "formik";
 import { ReactNode, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -46,6 +46,8 @@ export default function NewCampaign() {
 
   const [coverURL, setCoverURL] = useState("");
   const [dataHash, setDataHash] = useState("");
+
+  const tempSubmit = async () => {};
 
   const onSubmit = async (
     values: NewCampaignFormValue,
@@ -87,7 +89,6 @@ export default function NewCampaign() {
     toast("Initiating Transaction Window", {
       icon: "👛",
     });
-
     // create web3 transaction here
 
     setSubmitting(false);
@@ -104,6 +105,14 @@ export default function NewCampaign() {
           <p className="text-gray-300 text-xl">
             Please fill out all the details carefully to create a new campaign.
           </p>
+
+          <button
+            type="submit"
+            onClick={tempSubmit}
+            className="px-6 py-3 mt-4 bg-accent-500 text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400"
+          >
+            Submit
+          </button>
 
           <Formik
             initialValues={initialValues}
@@ -307,6 +316,7 @@ export default function NewCampaign() {
                       type="number"
                       value={values.maxAmount}
                       min={0}
+                      step={"any"}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       placeholder="Max contribution (defualt: 1 ETH)"
@@ -323,6 +333,7 @@ export default function NewCampaign() {
                       type="number"
                       value={values.goalAmount}
                       min={0}
+                      step={"any"}
                       onChange={handleChange}
                       onBlur={handleBlur}
                     />

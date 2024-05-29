@@ -1,97 +1,109 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-contract BlockBack {
-    uint public counter;
+import "forge-std/console.sol";
 
-    constructor() {
-        counter = 0;
+contract BlockBack {
+    enum CampaignStatus {
+        Active,
+        Completed,
+        Expired
+    }
+
+    struct GoalDetails {
+        uint256 minAmount;
+        uint256 maxAmount;
+        uint256 goal;
     }
 
     struct Campaign {
-        uint id;
-        address ownerAddress;
-        string metadataHash; // ipfs
-        uint raisedAmount;
-        uint minAmount;
-        uint maxAmount;
-        uint deadline;
-        uint totalFundraiseAmount;
-        bool isActive;
+        CampaignStatus status;
+        string metadataHash;
+        uint256 deadline;
+        GoalDetails goalDetails;
+        address owner;
     }
 
-    struct Contribution {
-        uint id;
-        uint amount;
-    }
+    uint256 private _nonce;
 
-    mapping(address => Campaign[]) private ownerToCampaigns;
-    mapping(uint => Campaign) private idToCampaign;
-    mapping(address => Contribution[]) private contributionToContributor;
+    mapping(uint256 => Campaign) private s_idToCampaign;
+    mapping(address => Campaign[]) private s_ownerToCampaigns;
+    Campaign[] private s_campaigns;
 
-    function getCampaign(
-        address _address
-    ) public view returns (Campaign[] memory) {
-        return ownerToCampaigns[_address];
-    }
+    event NewCampaign(
+        uint256 indexed id,
+        address indexed owner,
+        Campaign indexed campaign
+    );
 
-    function getCampaignById(uint id) public view returns (Campaign memory) {
-        return idToCampaign[id];
-    }
-
-    function getContributions() public view returns (Contribution[] memory) {
-        return contributionToContributor[msg.sender];
+    constructor() {
+        _nonce = 0;
     }
 
     function createCampaign(
         string memory _metadataHash,
-        uint _minAmount,
-        uint _maxAmount,
-        uint _deadline,
-        uint _totalFundraiseAmount
-    ) public {
-        Campaign[] storage _ownedCampaigns = ownerToCampaigns[msg.sender];
-        Campaign memory _newCampaign = Campaign({
-            id: counter,
-            ownerAddress: msg.sender,
+        uint256 _minAmount,
+        uint256 _maxAmount,
+        uint256 _goal,
+        uint256 _deadline
+    ) external {
+        uint256 randomId = uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.timestamp,
+                    block.prevrandao,
+                    msg.sender,
+                    _nonce
+                )
+            )
+        );
+        _nonce++;
+
+        Campaign memory campaign = Campaign({
+            status: CampaignStatus.Active,
             metadataHash: _metadataHash,
-            raisedAmount: 0,
-            minAmount: _minAmount,
-            maxAmount: _maxAmount,
             deadline: _deadline,
-            isActive: true,
-            totalFundraiseAmount: _totalFundraiseAmount
+            goalDetails: GoalDetails({
+                minAmount: _minAmount,
+                maxAmount: _maxAmount,
+                goal: _goal
+            }),
+            owner: msg.sender
         });
-        _ownedCampaigns.push(_newCampaign);
-        idToCampaign[counter] = _newCampaign;
 
-        ownerToCampaigns[msg.sender] = _ownedCampaigns;
+        s_idToCampaign[randomId] = campaign;
+        s_ownerToCampaigns[msg.sender].push(campaign);
+        s_campaigns.push(campaign);
 
-        counter++;
+        emit NewCampaign(randomId, msg.sender, campaign);
     }
 
-    function showThis() public payable returns (uint) {
-        return msg.value;
+    function donate(uint256 _id) external payable {
+        Campaign storage campaign = s_idToCampaign[_id];
+        require(
+            campaign.status == CampaignStatus.Active,
+            "Campaign is not active"
+        );
+        require(block.timestamp < campaign.deadline, "Campaign has expired");
+        require(
+            msg.value >= campaign.goalDetails.minAmount,
+            "Amount is less than minAmount"
+        );
+        require(
+            msg.value <= campaign.goalDetails.maxAmount,
+            "Amount is more than maxAmount"
+        );
+
+        if (address(this).balance >= campaign.goalDetails.goal) {
+            campaign.status = CampaignStatus.Completed;
+        }
     }
 
-    function contribute(uint id) external payable {
-        Campaign memory campaign = idToCampaign[id];
+    function getCampaign(uint256 _id) external view returns (Campaign memory) {
+        return s_idToCampaign[_id];
+    }
 
-        require(
-            msg.value <= campaign.maxAmount && msg.value >= campaign.minAmount,
-            "Contribution amount must be within the allowed range specified by the campaign."
-        );
-        require(
-            campaign.raisedAmount <= campaign.totalFundraiseAmount,
-            "Campaign's raised amount has met the total fundraise amount."
-        );
-
-        campaign.raisedAmount += msg.value;
-        Contribution[] storage _contributions = contributionToContributor[
-            msg.sender
-        ];
-
-        _contributions.push(Contribution({id: campaign.id, amount: msg.value}));
-        contributionToContributor[msg.sender] = _contributions;
+    function getAllCampaigns() external view returns (Campaign[] memory) {
+        return s_campaigns;
     }
 }
