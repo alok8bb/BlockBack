@@ -6,8 +6,7 @@ import "forge-std/console.sol";
 contract BlockBack {
     enum CampaignStatus {
         Active,
-        Completed,
-        Expired
+        Completed
     }
 
     struct GoalDetails {
@@ -21,6 +20,7 @@ contract BlockBack {
         string metadataHash;
         uint256 deadline;
         GoalDetails goalDetails;
+        uint256 raisedAmount;
         address owner;
     }
 
@@ -30,10 +30,21 @@ contract BlockBack {
     mapping(address => Campaign[]) private s_ownerToCampaigns;
     Campaign[] private s_campaigns;
 
+    error BlockBack__CampaignInactive();
+    error BlockBack__CampaignExpired();
+    error BlockBack__AmountLessThanMinAmount();
+    error BlockBack__AmountMoreThanMaxAmount();
+
     event NewCampaign(
         uint256 indexed id,
         address indexed owner,
         Campaign indexed campaign
+    );
+
+    event DonationSuccess(
+        uint256 indexed campaignId,
+        uint256 indexed amount,
+        address indexed donator
     );
 
     constructor() {
@@ -46,8 +57,8 @@ contract BlockBack {
         uint256 _maxAmount,
         uint256 _goal,
         uint256 _deadline
-    ) external {
-        uint256 randomId = uint256(
+    ) external returns (uint256) {
+        uint256 id = uint256(
             keccak256(
                 abi.encodePacked(
                     block.timestamp,
@@ -68,32 +79,38 @@ contract BlockBack {
                 maxAmount: _maxAmount,
                 goal: _goal
             }),
+            raisedAmount: 0,
             owner: msg.sender
         });
 
-        s_idToCampaign[randomId] = campaign;
+        s_idToCampaign[id] = campaign;
         s_ownerToCampaigns[msg.sender].push(campaign);
         s_campaigns.push(campaign);
 
-        emit NewCampaign(randomId, msg.sender, campaign);
+        emit NewCampaign(id, msg.sender, campaign);
+        return id;
     }
 
     function donate(uint256 _id) external payable {
         Campaign storage campaign = s_idToCampaign[_id];
-        require(
-            campaign.status == CampaignStatus.Active,
-            "Campaign is not active"
-        );
-        require(block.timestamp < campaign.deadline, "Campaign has expired");
-        require(
-            msg.value >= campaign.goalDetails.minAmount,
-            "Amount is less than minAmount"
-        );
-        require(
-            msg.value <= campaign.goalDetails.maxAmount,
-            "Amount is more than maxAmount"
-        );
+        if (campaign.status != CampaignStatus.Active) {
+            revert BlockBack__CampaignInactive();
+        }
 
+        if (block.timestamp > campaign.deadline) {
+            revert BlockBack__CampaignExpired();
+        }
+
+        if (msg.value < campaign.goalDetails.minAmount) {
+            revert BlockBack__AmountLessThanMinAmount();
+        }
+
+        if (msg.value > campaign.goalDetails.maxAmount) {
+            revert BlockBack__AmountMoreThanMaxAmount();
+        }
+
+        emit DonationSuccess(_id, msg.value, msg.sender);
+        campaign.raisedAmount += msg.value;
         if (address(this).balance >= campaign.goalDetails.goal) {
             campaign.status = CampaignStatus.Completed;
         }
