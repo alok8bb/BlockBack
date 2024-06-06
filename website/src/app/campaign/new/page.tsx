@@ -6,35 +6,25 @@
 "use client";
 
 import Navbar from "@/components/navbar";
+import { BlockBack_ABI } from "@/contract/abi";
+import { SERVER_ENDPOINTS, contractAddress } from "@/lib/config";
+import { CampaignMetadata, FundCategories } from "@/lib/types";
 import { Formik, FormikErrors } from "formik";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useWriteContract } from "wagmi";
+import { redirect } from "next/navigation";
 
-const FundCategories = [
-  "Technology",
-  "Health and Wellness",
-  "Social Impact",
-  "Creative Arts",
-  "Business and Entrepreneurship",
-  "Other",
-] as const;
-type TFundCategory = (typeof FundCategories)[number];
-
-interface NewCampaignFormValue {
-  title: string;
-  category: TFundCategory;
-  description: string;
+type FormikValues = CampaignMetadata & {
   minAmount: number | string;
   maxAmount: number | string;
   goalAmount: number;
-  website?: string;
-  twitter?: string;
   deadline: string | number;
   cover?: File;
-}
+};
 
 export default function NewCampaign() {
-  const initialValues: NewCampaignFormValue = {
+  const initialValues: FormikValues = {
     title: "",
     description: "",
     minAmount: "",
@@ -46,11 +36,20 @@ export default function NewCampaign() {
 
   const [coverURL, setCoverURL] = useState("");
   const [dataHash, setDataHash] = useState("");
+  const { writeContract, isSuccess, isError, error } = useWriteContract();
+  useEffect(() => {
+    if (isSuccess) {
+      toast.success("Campaign created successfully!");
+    }
 
-  const tempSubmit = async () => {};
+    if (isError) {
+      toast.error("Oops, something went wrong, couldn't create transaction!");
+      console.log(error);
+    }
+  }, [isSuccess, isError]);
 
   const onSubmit = async (
-    values: NewCampaignFormValue,
+    values: FormikValues,
     { setSubmitting }: { setSubmitting: (setSubmitting: boolean) => void }
   ) => {
     const deadlineEpoch = new Date(values.deadline).getTime() / 1000;
@@ -58,16 +57,19 @@ export default function NewCampaign() {
     values = {
       ...values,
       deadline: deadlineEpoch,
-      maxAmount: values.maxAmount === "" ? 10 : values.maxAmount,
-      minAmount: values.minAmount === "" ? 0.0001 : values.minAmount,
+      maxAmount:
+        values.maxAmount === "" ? 10 : Number(values.maxAmount) * 10 ** 18,
+      minAmount:
+        values.minAmount === "" ? 0.0001 : Number(values.minAmount) * 10 ** 18,
+      goalAmount: Number(values.goalAmount) * 10 ** 18,
     };
 
     const formData = new FormData();
-    formData.append("data", JSON.stringify(values));
+    formData.append("data", JSON.stringify(values as CampaignMetadata));
     formData.append("cover_image", values.cover!);
 
     try {
-      const res = await fetch(process.env.SERVER_URL + "/data/upload", {
+      const res = await fetch(SERVER_ENDPOINTS.uploadData, {
         method: "POST",
         body: formData,
       });
@@ -76,7 +78,11 @@ export default function NewCampaign() {
         const json: {
           hash: string;
         } = await res.json();
+        console.log(json);
         setDataHash(json.hash);
+        toast("Metadata saved successfully", {
+          icon: "💾",
+        });
       } else {
         throw new Error("server error!");
       }
@@ -89,7 +95,19 @@ export default function NewCampaign() {
     toast("Initiating Transaction Window", {
       icon: "👛",
     });
-    // create web3 transaction here
+
+    writeContract({
+      abi: BlockBack_ABI,
+      address: contractAddress as `0x${string}`,
+      functionName: "createCampaign",
+      args: [
+        dataHash,
+        BigInt(values.minAmount),
+        BigInt(values.maxAmount),
+        BigInt(values.goalAmount),
+        BigInt(values.deadline),
+      ],
+    });
 
     setSubmitting(false);
   };
@@ -98,26 +116,17 @@ export default function NewCampaign() {
     <>
       <Navbar />
       <div className="flex w-full items-center justify-center my-10">
-        <div className="w-[40%] flex gap-3 flex-col">
+        <div className="lg:w-[40%] flex gap-3 flex-col">
           <h1 className="text-4xl font-bold tracking-wide">
             🚩 Create a new campaign
           </h1>
           <p className="text-gray-300 text-xl">
             Please fill out all the details carefully to create a new campaign.
           </p>
-
-          <button
-            type="submit"
-            onClick={tempSubmit}
-            className="px-6 py-3 mt-4 bg-accent-500 text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400"
-          >
-            Submit
-          </button>
-
           <Formik
             initialValues={initialValues}
             validate={(values) => {
-              const errors: FormikErrors<NewCampaignFormValue> = {};
+              const errors: FormikErrors<FormikValues> = {};
 
               if (!values.cover) {
                 errors.cover = "Please select a cover image for the campaign";
@@ -300,6 +309,7 @@ export default function NewCampaign() {
                       type="number"
                       value={values.minAmount}
                       min={0}
+                      step={"any"}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       placeholder="Min contribution (defualt: 0+ ETH)"
@@ -398,13 +408,13 @@ export default function NewCampaign() {
   );
 }
 
-const inputStyles = `text-white p-4 px-4 rounded-md bg-magic-gray-2 placeholder-gray-500`;
+export const inputStyles = `text-white p-4 px-4 rounded-md bg-magic-gray-2 placeholder-gray-500`;
 const labelStyles = `text-gray-400`;
 
-const InputLayout: React.FC<{ className?: string; children: ReactNode }> = ({
-  className,
-  children,
-}) => {
+export const InputLayout: React.FC<{
+  className?: string;
+  children: ReactNode;
+}> = ({ className, children }) => {
   return (
     <div className={`${className ?? ""} flex flex-col gap-2`}>{children}</div>
   );

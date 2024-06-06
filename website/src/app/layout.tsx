@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Hanken_Grotesk, Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
-import { WagmiProvider } from "wagmi";
-import { config } from "./config";
 import { headers } from "next/headers";
 import { cookieToInitialState } from "wagmi";
-import { Providers } from "./providers";
+import WagmiProviderComp from "@/lib/wagmi-provider";
+import { config } from "@/lib/config";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,10 +35,10 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${hankenGrotesk.variable} flex h-auto flex-col px-20 font-body pb-5`}
       >
-        <Providers initialState={initialState}>
-          <Toaster position="bottom-right" reverseOrder={false} />
+        <Toaster position="bottom-right" reverseOrder={false} />
+        <WagmiProviderComp initialState={initialState}>
           {children}
-        </Providers>
+        </WagmiProviderComp>
       </body>
     </html>
   );

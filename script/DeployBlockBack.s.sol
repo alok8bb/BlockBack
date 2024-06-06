@@ -6,7 +6,8 @@ import {BlockBack} from "../src/BlockBack.sol";
 
 contract DeployBlockBack is Script {
     function run() external returns (BlockBack) {
-        vm.startBroadcast();
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
         BlockBack blockBack = new BlockBack();
         vm.stopBroadcast();
         return (blockBack);

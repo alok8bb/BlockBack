@@ -8,6 +8,7 @@ import {BlockBack} from "../src/BlockBack.sol";
 contract BlockBackTest is Test, BlockBack {
     BlockBack blockbackContract;
 
+    address public OWNER = address(this);
     address public USER = makeAddr("user");
     address public DONATOR = makeAddr("donator");
     uint256 public constant INITIAL_BALANCE = 100 ether;
@@ -31,11 +32,12 @@ contract BlockBackTest is Test, BlockBack {
 
         /** @dev cannot test the ID (first indexed value) as it is randomly generated
         in the function itself, at test time we don't know the value */
-        vm.expectEmit(false, true, false, false);
+        vm.expectEmit(true, true, false, false);
         emit NewCampaign(
             0,
             USER,
             Campaign(
+                0,
                 CampaignStatus.Active,
                 _metadataHash,
                 _deadline,
@@ -77,7 +79,22 @@ contract BlockBackTest is Test, BlockBack {
     /* Helper function to create a test campaign */
     function createTestCampaign() public returns (uint256) {
         vm.prank(USER);
-        uint256 id = blockbackContract.createCampaign(
+        vm.recordLogs();
+        vm.expectEmit(true, true, false, false);
+        emit NewCampaign(
+            0,
+            USER,
+            Campaign(
+                0,
+                CampaignStatus.Active,
+                _metadataHash,
+                _deadline,
+                GoalDetails(_minAmount, _maxAmount, _goal),
+                0,
+                USER
+            )
+        );
+        blockbackContract.createCampaign(
             _metadataHash,
             _minAmount,
             _maxAmount,
@@ -85,7 +102,13 @@ contract BlockBackTest is Test, BlockBack {
             _deadline
         );
 
-        return id;
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 2);
+        assertEq(entries[0].topics.length, 4);
+        assertEq(entries[1].topics.length, 4);
+        uint256 newCampaignId = uint256(entries[1].topics[1]);
+
+        return newCampaignId;
     }
 
     function testDonate() public {
@@ -193,5 +216,35 @@ contract BlockBackTest is Test, BlockBack {
         }(abi.encodeWithSignature("donate(uint256)", campaignId));
 
         assertTrue(revertsAsExpected);
+    }
+
+    function testReceiveEther() public {
+        payable(address(blockbackContract)).transfer(1 ether);
+
+        assertEq(blockbackContract.getBalance(), 1 ether);
+    }
+
+    function testFundWithdrawByOwner() public {
+        payable(address(blockbackContract)).transfer(1 ether);
+        vm.prank(OWNER);
+        vm.recordLogs();
+        (bool success, ) = address(blockbackContract).call(
+            abi.encodeWithSignature("withdraw()")
+        );
+
+        assertTrue(success);
+        assertEq(address(blockbackContract).balance, 0);
+    }
+
+    function testFailFundWithdrawByNonOwner() public {
+        payable(address(blockbackContract)).transfer(1 ether);
+        vm.prank(USER);
+        vm.recordLogs();
+        (bool success, ) = address(blockbackContract).call(
+            abi.encodeWithSignature("withdraw()")
+        );
+
+        assertTrue(success);
+        assertEq(address(blockbackContract).balance, 0);
     }
 }

@@ -1,12 +1,8 @@
 "use client";
 
-import { useConnect } from "wagmi";
 import { MainIcon } from "./icons";
-import { getTruncatedWalletAddr } from "@/utils";
-import { metaMask } from "wagmi/connectors";
 
 export default function Navbar() {
-  const { connect } = useConnect();
   return (
     <nav className="flex justify-between p-10 font-sans items-center">
       <div className="flex flex-row items-center gap-4">
@@ -26,14 +22,7 @@ export default function Navbar() {
         >
           Create Campaign
         </a>
-        <button
-          onClick={() => {
-            connect({ connector: metaMask() });
-          }}
-          className="px-8 py-1 rounded-full border-2 border-accent-500 hover:bg-accent-500 hover:text-white transition duration-300"
-        >
-          Login
-        </button>
+        <w3m-button />
       </div>
     </nav>
   );

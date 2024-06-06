@@ -2,8 +2,9 @@
 pragma solidity 0.8.25;
 
 import "forge-std/console.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract BlockBack {
+contract BlockBack is Ownable {
     enum CampaignStatus {
         Active,
         Completed
@@ -16,6 +17,7 @@ contract BlockBack {
     }
 
     struct Campaign {
+        uint256 id;
         CampaignStatus status;
         string metadataHash;
         uint256 deadline;
@@ -24,11 +26,13 @@ contract BlockBack {
         address owner;
     }
 
-    uint256 private _nonce;
+    uint256 private campaignCounter;
 
     mapping(uint256 => Campaign) private s_idToCampaign;
-    mapping(address => Campaign[]) private s_ownerToCampaigns;
+    mapping(address => uint256[]) private s_ownerToCampaignIds;
     Campaign[] private s_campaigns;
+
+    receive() external payable {}
 
     error BlockBack__CampaignInactive();
     error BlockBack__CampaignExpired();
@@ -48,7 +52,7 @@ contract BlockBack {
     );
 
     constructor() {
-        _nonce = 0;
+        campaignCounter = 0;
     }
 
     function createCampaign(
@@ -57,20 +61,9 @@ contract BlockBack {
         uint256 _maxAmount,
         uint256 _goal,
         uint256 _deadline
-    ) external returns (uint256) {
-        uint256 id = uint256(
-            keccak256(
-                abi.encodePacked(
-                    block.timestamp,
-                    block.prevrandao,
-                    msg.sender,
-                    _nonce
-                )
-            )
-        );
-        _nonce++;
-
+    ) external {
         Campaign memory campaign = Campaign({
+            id: campaignCounter,
             status: CampaignStatus.Active,
             metadataHash: _metadataHash,
             deadline: _deadline,
@@ -79,16 +72,16 @@ contract BlockBack {
                 maxAmount: _maxAmount,
                 goal: _goal
             }),
-            raisedAmount: 0,
+            raisedAmount: 0 ether,
             owner: msg.sender
         });
 
-        s_idToCampaign[id] = campaign;
-        s_ownerToCampaigns[msg.sender].push(campaign);
+        s_idToCampaign[campaignCounter] = campaign;
+        s_ownerToCampaignIds[msg.sender].push(campaignCounter);
         s_campaigns.push(campaign);
 
-        emit NewCampaign(id, msg.sender, campaign);
-        return id;
+        emit NewCampaign(campaignCounter, msg.sender, campaign);
+        campaignCounter++;
     }
 
     function donate(uint256 _id) external payable {
@@ -116,11 +109,19 @@ contract BlockBack {
         }
     }
 
+    function withdraw() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
     function getCampaign(uint256 _id) external view returns (Campaign memory) {
         return s_idToCampaign[_id];
     }
 
     function getAllCampaigns() external view returns (Campaign[] memory) {
         return s_campaigns;
+    }
+
+    function getBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 }
