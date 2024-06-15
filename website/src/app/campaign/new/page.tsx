@@ -10,10 +10,10 @@ import { BlockBack_ABI } from "@/contract/abi";
 import { SERVER_ENDPOINTS, contractAddress } from "@/lib/config";
 import { CampaignMetadata, FundCategories } from "@/lib/types";
 import { Formik, FormikErrors } from "formik";
+import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useWriteContract } from "wagmi";
-import { redirect } from "next/navigation";
 
 type FormikValues = CampaignMetadata & {
   minAmount: number | string;
@@ -24,6 +24,7 @@ type FormikValues = CampaignMetadata & {
 };
 
 export default function NewCampaign() {
+  const router = useRouter();
   const initialValues: FormikValues = {
     title: "",
     description: "",
@@ -35,11 +36,13 @@ export default function NewCampaign() {
   };
 
   const [coverURL, setCoverURL] = useState("");
-  const [dataHash, setDataHash] = useState("");
   const { writeContract, isSuccess, isError, error } = useWriteContract();
   useEffect(() => {
     if (isSuccess) {
-      toast.success("Campaign created successfully!");
+      toast.success(
+        "Transaction sent successfully, new campaign will reflect shortly after txn completion!"
+      );
+      router.push("/");
     }
 
     if (isError) {
@@ -52,7 +55,9 @@ export default function NewCampaign() {
     values: FormikValues,
     { setSubmitting }: { setSubmitting: (setSubmitting: boolean) => void }
   ) => {
-    const deadlineEpoch = new Date(values.deadline).getTime() / 1000;
+    const deadlineEpoch = Math.floor(
+      new Date(values.deadline).getTime() / 1000
+    );
 
     values = {
       ...values,
@@ -73,43 +78,47 @@ export default function NewCampaign() {
         method: "POST",
         body: formData,
       });
+      console.log(res);
 
-      if (res.ok) {
-        const json: {
-          hash: string;
-        } = await res.json();
-        console.log(json);
-        setDataHash(json.hash);
-        toast("Metadata saved successfully", {
-          icon: "💾",
-        });
-      } else {
+      if (!res.ok) {
         throw new Error("server error!");
       }
+      const json: {
+        hash: string;
+      } = await res.json();
+      console.log(json);
+      toast("Metadata saved successfully", {
+        icon: "💾",
+      });
+
+      toast("Initiating Transaction Window", {
+        icon: "👛",
+      });
+
+      if (!json.hash) {
+        toast.error("Data hash not available, please try again later!");
+        return;
+      }
+
+      writeContract({
+        abi: BlockBack_ABI,
+        address: contractAddress as `0x${string}`,
+        functionName: "createCampaign",
+        args: [
+          json.hash,
+          BigInt(values.minAmount),
+          BigInt(values.maxAmount),
+          BigInt(values.goalAmount),
+          BigInt(values.deadline),
+        ],
+      });
+
+      setSubmitting(false);
     } catch (e) {
       console.error(e);
       toast.error("Oops, something went wrong, please try again later!");
       return;
     }
-
-    toast("Initiating Transaction Window", {
-      icon: "👛",
-    });
-
-    writeContract({
-      abi: BlockBack_ABI,
-      address: contractAddress as `0x${string}`,
-      functionName: "createCampaign",
-      args: [
-        dataHash,
-        BigInt(values.minAmount),
-        BigInt(values.maxAmount),
-        BigInt(values.goalAmount),
-        BigInt(values.deadline),
-      ],
-    });
-
-    setSubmitting(false);
   };
 
   return (

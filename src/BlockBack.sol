@@ -38,6 +38,8 @@ contract BlockBack is Ownable {
     error BlockBack__CampaignExpired();
     error BlockBack__AmountLessThanMinAmount();
     error BlockBack__AmountMoreThanMaxAmount();
+    error BlockBack__OnlyOwnerCanWithdraw();
+    error BlockBack__DeadlineNotMet();
 
     event NewCampaign(
         uint256 indexed id,
@@ -50,6 +52,8 @@ contract BlockBack is Ownable {
         uint256 indexed amount,
         address indexed donator
     );
+
+    event CampaignWithrawn(uint256 indexed campaignId, address indexed owner);
 
     constructor() {
         campaignCounter = 0;
@@ -84,7 +88,7 @@ contract BlockBack is Ownable {
         campaignCounter++;
     }
 
-    function donate(uint256 _id) external payable {
+    function contribute(uint256 _id) external payable {
         Campaign storage campaign = s_idToCampaign[_id];
         if (campaign.status != CampaignStatus.Active) {
             revert BlockBack__CampaignInactive();
@@ -104,9 +108,29 @@ contract BlockBack is Ownable {
 
         emit DonationSuccess(_id, msg.value, msg.sender);
         campaign.raisedAmount += msg.value;
-        if (address(this).balance >= campaign.goalDetails.goal) {
-            campaign.status = CampaignStatus.Completed;
+        s_campaigns[_id] = campaign;
+    }
+
+    function withdrawCampaign(uint256 _id) external payable {
+        console.log(msg.sender);
+        Campaign storage campaign = s_idToCampaign[_id];
+        if (campaign.owner != msg.sender) {
+            console.log("bruh");
+            revert BlockBack__OnlyOwnerCanWithdraw();
         }
+
+        if (campaign.deadline > block.timestamp) {
+            console.log("where?");
+            revert BlockBack__DeadlineNotMet();
+        }
+
+        campaign.status = CampaignStatus.Completed;
+        s_campaigns[_id] = campaign;
+
+        console.log("here");
+        payable(msg.sender).transfer(campaign.raisedAmount);
+        emit CampaignWithrawn(_id, msg.sender);
+        console.log("here");
     }
 
     function withdraw() external onlyOwner {
@@ -119,6 +143,17 @@ contract BlockBack is Ownable {
 
     function getAllCampaigns() external view returns (Campaign[] memory) {
         return s_campaigns;
+    }
+
+    function getCampaignsByCreator() external view returns (Campaign[] memory) {
+        uint256[] memory campaignIds = s_ownerToCampaignIds[msg.sender];
+        Campaign[] memory campaigns = new Campaign[](campaignIds.length);
+
+        for (uint256 i = 0; i < campaignIds.length; i++) {
+            campaigns[i] = s_idToCampaign[campaignIds[i]];
+        }
+
+        return campaigns;
     }
 
     function getBalance() public view returns (uint256) {

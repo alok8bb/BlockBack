@@ -100,10 +100,15 @@ export default function Home() {
             !serverError &&
             campaigns
               .filter((campaign) => {
+                const campaignDeadline = Number(campaign.deadline);
+                const currentTimestamp = Math.floor(
+                  new Date().getTime() / 1000
+                );
+
                 if (selectedFilter === "Ongoing") {
-                  return campaign.status === 0;
+                  return campaignDeadline > currentTimestamp;
                 } else {
-                  return campaign.status === 1;
+                  return campaignDeadline < currentTimestamp;
                 }
               })
               .map((campaign, key) => (
@@ -123,6 +128,13 @@ export default function Home() {
                     {campaign.description}
                   </p>
                   <div className="flex flex-col w-full gap-2 mt-auto">
+                    <h1>
+                      {`${getCompletionPercentage(
+                        campaign.goalDetails.goal,
+                        campaign.raisedAmount
+                      )}
+                      %`}
+                    </h1>
                     <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                       <div
                         className={`bg-blue-600 h-2.5 rounded-full`}

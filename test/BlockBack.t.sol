@@ -111,7 +111,7 @@ contract BlockBackTest is Test, BlockBack {
         return newCampaignId;
     }
 
-    function testDonate() public {
+    function testContribute() public {
         uint256 campaignId = createTestCampaign();
         vm.prank(DONATOR);
         vm.recordLogs();
@@ -121,7 +121,7 @@ contract BlockBackTest is Test, BlockBack {
 
         (bool callSuccess, ) = address(blockbackContract).call{
             value: 0.2 ether
-        }(abi.encodeWithSignature("donate(uint256)", campaignId));
+        }(abi.encodeWithSignature("contribute(uint256)", campaignId));
         assertEq(callSuccess, true);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -149,7 +149,7 @@ contract BlockBackTest is Test, BlockBack {
         vm.expectRevert(BlockBack.BlockBack__AmountLessThanMinAmount.selector);
         (bool revertsAsExpected, ) = address(blockbackContract).call{
             value: 0.03 ether
-        }(abi.encodeWithSignature("donate(uint256)", campaignId));
+        }(abi.encodeWithSignature("contribute(uint256)", campaignId));
         assertTrue(revertsAsExpected);
     }
 
@@ -160,51 +160,52 @@ contract BlockBackTest is Test, BlockBack {
         vm.expectRevert(BlockBack.BlockBack__AmountMoreThanMaxAmount.selector);
         (bool revertsAsExpected, ) = address(blockbackContract).call{
             value: 11 ether
-        }(abi.encodeWithSignature("donate(uint256)", campaignId));
+        }(abi.encodeWithSignature("contribute(uint256)", campaignId));
         assertTrue(revertsAsExpected);
     }
 
     function donationMaker(uint256 campaignId) public payable {
+        vm.prank(DONATOR);
         bool res = false;
 
         /* Complete goal of the campaign */
         (res, ) = address(blockbackContract).call{value: 10 ether}(
-            abi.encodeWithSignature("donate(uint256)", campaignId)
+            abi.encodeWithSignature("contribute(uint256)", campaignId)
         );
 
         (res, ) = address(blockbackContract).call{value: 10 ether}(
-            abi.encodeWithSignature("donate(uint256)", campaignId)
+            abi.encodeWithSignature("contribute(uint256)", campaignId)
         );
 
         (res, ) = address(blockbackContract).call{value: 10 ether}(
-            abi.encodeWithSignature("donate(uint256)", campaignId)
+            abi.encodeWithSignature("contribute(uint256)", campaignId)
         );
     }
 
-    function testStatusCompletedAfterGoalReached() public {
-        uint256 campaignId = createTestCampaign();
-        donationMaker(campaignId);
-        Campaign memory campaign = blockbackContract.getCampaign(campaignId);
-        assertEq(
-            uint(campaign.status),
-            uint(BlockBack.CampaignStatus.Completed)
-        );
-    }
+    // function testStatusCompletedAfterGoalReached() public {
+    //     uint256 campaignId = createTestCampaign();
+    //     donationMaker(campaignId);
+    //     Campaign memory campaign = blockbackContract.getCampaign(campaignId);
+    //     assertEq(
+    //         uint(campaign.status),
+    //         uint(BlockBack.CampaignStatus.Completed)
+    //     );
+    // }
 
-    function testRevertOnDonateIfCampaignNotActive() public {
-        uint256 campaignId = createTestCampaign();
-        donationMaker(campaignId);
+    // function testRevertOnContributeIfCampaignNotActive() public {
+    //     uint256 campaignId = createTestCampaign();
+    //     donationMaker(campaignId);
 
-        /* Make another donation after the campaign is completed */
-        vm.expectRevert(BlockBack.BlockBack__CampaignInactive.selector);
-        (bool revertsAsExpected, ) = address(blockbackContract).call{
-            value: 10 ether
-        }(abi.encodeWithSignature("donate(uint256)", campaignId));
+    //     /* Make another donation after the campaign is completed */
+    //     vm.expectRevert(BlockBack.BlockBack__CampaignInactive.selector);
+    //     (bool revertsAsExpected, ) = address(blockbackContract).call{
+    //         value: 10 ether
+    //     }(abi.encodeWithSignature("contribute(uint256)", campaignId));
 
-        assertTrue(revertsAsExpected);
-    }
+    //     assertTrue(revertsAsExpected);
+    // }
 
-    function testRevertOnDonateAfterDeadline() public {
+    function testRevertOnContributeAfterDeadline() public {
         uint256 campaignId = createTestCampaign();
         Campaign memory campaign = blockbackContract.getCampaign(campaignId);
 
@@ -213,7 +214,7 @@ contract BlockBackTest is Test, BlockBack {
         vm.expectRevert(BlockBack.BlockBack__CampaignExpired.selector);
         (bool revertsAsExpected, ) = address(blockbackContract).call{
             value: 0.1 ether
-        }(abi.encodeWithSignature("donate(uint256)", campaignId));
+        }(abi.encodeWithSignature("contribute(uint256)", campaignId));
 
         assertTrue(revertsAsExpected);
     }
@@ -246,5 +247,42 @@ contract BlockBackTest is Test, BlockBack {
 
         assertTrue(success);
         assertEq(address(blockbackContract).balance, 0);
+    }
+
+    function testCampaignArrayUpdateOnContribution() public {
+        uint256 campaignId = createTestCampaign();
+        donationMaker(campaignId);
+
+        Campaign[] memory campaigns = blockbackContract.getAllCampaigns();
+        assertEq(campaigns[0].raisedAmount, 30 ether);
+    }
+
+    function testCampaignWithdraw() public {
+        uint256 campaignId = createTestCampaign();
+        donationMaker(campaignId);
+        uint256 balance = USER.balance;
+        Campaign memory c = blockbackContract.getCampaign(campaignId);
+
+        skip(c.deadline + 3000);
+        vm.prank(USER);
+        (bool success, ) = address(blockbackContract).call(
+            abi.encodeWithSignature("withdrawCampaign(uint256)", campaignId)
+        );
+        assertTrue(success);
+        Campaign memory campaign = blockbackContract.getCampaign(campaignId);
+        assert(campaign.status == CampaignStatus.Completed);
+        assert(USER.balance - balance == 30 ether);
+    }
+
+    function testFailCampaignWithdrawBeforeDeadline() public {
+        uint256 campaignId = createTestCampaign();
+        donationMaker(campaignId);
+
+        vm.expectRevert(BlockBack.BlockBack__DeadlineNotMet.selector);
+        (bool success, ) = address(blockbackContract).call(
+            abi.encodeWithSignature("withdrawCampaign(uint256)", campaignId)
+        );
+
+        assertTrue(success);
     }
 }

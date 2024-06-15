@@ -13,8 +13,8 @@ export default function Navbar() {
       </div>
 
       <div className="flex flex-row items-center gap-12 text-xl font-semibold text-gray-200 transition duration-300">
-        <a href="" className="hover:text-accent-500">
-          About
+        <a href="/manage" className="hover:text-accent-500">
+          Manage Campaigns
         </a>
         <a
           href="/campaign/new"
