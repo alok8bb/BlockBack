@@ -5,6 +5,7 @@
 
 "use client";
 
+import { InputLayout, inputStyles } from "@/components";
 import Navbar from "@/components/navbar";
 import { BlockBack_ABI } from "@/contract/abi";
 import { SERVER_ENDPOINTS, contractAddress } from "@/lib/config";
@@ -417,17 +418,7 @@ export default function NewCampaign() {
   );
 }
 
-export const inputStyles = `text-white p-4 px-4 rounded-md bg-magic-gray-2 placeholder-gray-500`;
 const labelStyles = `text-gray-400`;
-
-export const InputLayout: React.FC<{
-  className?: string;
-  children: ReactNode;
-}> = ({ className, children }) => {
-  return (
-    <div className={`${className ?? ""} flex flex-col gap-2`}>{children}</div>
-  );
-};
 
 const ErrorText: React.FC<{ className?: string; children: ReactNode }> = ({
   className,

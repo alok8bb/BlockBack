@@ -12,10 +12,10 @@ import { HiOutlineGlobe } from "react-icons/hi";
 import { RxTwitterLogo } from "react-icons/rx";
 import Jazzicon from "react-jazzicon";
 import { useReadContract, useWriteContract } from "wagmi";
-import { inputStyles } from "../new/page";
 import { parseEther } from "viem";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { inputStyles } from "@/components";
 
 export default function CampaignPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
@@ -217,6 +217,6 @@ export default function CampaignPage({ params }: { params: { slug: string } }) {
   );
 }
 
-export const TitleHeader: ReactFCC = ({ children }) => {
+const TitleHeader: ReactFCC = ({ children }) => {
   return <h1 className="text-xl font-semibold tracking-wide">{children}</h1>;
 };
