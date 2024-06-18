@@ -84,7 +84,7 @@ export default function Home() {
             Finished
           </h1>
         </div>
-        <div className="my-4 flex w-full gap-4">
+        <div className="my-4 flex w-full gap-4 flex-col md:flex-row">
           {(isPending || serverError || error) && (
             <div className="h-full w-full flex items-center justify-center content-center py-40 text-xl">
               {isPending
@@ -113,7 +113,7 @@ export default function Home() {
               })
               .map((campaign, key) => (
                 <div
-                  className="flex flex-col p-4 bg-magic-gray rounded-2xl w-1/3 gap-2 hover:cursor-pointer"
+                  className="flex flex-col p-4 bg-magic-gray rounded-2xl md:w-1/3 gap-2 hover:cursor-pointer"
                   key={key}
                   onClick={() => router.push(`/campaign/${campaign.id}`)}
                 >

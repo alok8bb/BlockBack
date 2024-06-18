@@ -4,7 +4,7 @@ import { MainIcon } from "./icons";
 
 export default function Navbar() {
   return (
-    <nav className="flex justify-between p-10 font-sans items-center">
+    <nav className="flex justify-between py-10 font-sans items-center">
       <div className="flex flex-row items-center gap-4">
         <MainIcon height={40} width={40} className={"fill-accent-500"} />
         <a href="/" className="text-3xl text-gray-100 font-bold tracking-wide">
@@ -12,7 +12,7 @@ export default function Navbar() {
         </a>
       </div>
 
-      <div className="flex flex-row items-center gap-12 text-xl font-semibold text-gray-200 transition duration-300">
+      <div className="hidden lg:flex flex-row items-center gap-12 text-xl font-semibold text-gray-200 transition duration-300">
         <a href="/manage" className="hover:text-accent-500">
           Manage Campaigns
         </a>

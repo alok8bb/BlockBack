@@ -112,25 +112,20 @@ contract BlockBack is Ownable {
     }
 
     function withdrawCampaign(uint256 _id) external payable {
-        console.log(msg.sender);
         Campaign storage campaign = s_idToCampaign[_id];
         if (campaign.owner != msg.sender) {
-            console.log("bruh");
             revert BlockBack__OnlyOwnerCanWithdraw();
         }
 
         if (campaign.deadline > block.timestamp) {
-            console.log("where?");
             revert BlockBack__DeadlineNotMet();
         }
 
         campaign.status = CampaignStatus.Completed;
         s_campaigns[_id] = campaign;
 
-        console.log("here");
         payable(msg.sender).transfer(campaign.raisedAmount);
         emit CampaignWithrawn(_id, msg.sender);
-        console.log("here");
     }
 
     function withdraw() external onlyOwner {

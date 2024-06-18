@@ -87,10 +87,10 @@ export default function CampaignPage({ params }: { params: { slug: string } }) {
   return (
     <>
       <Navbar />
-      <div className="w-full flex justify-center items-center mt-10">
+      <div className="w-full flex justify-center items-center md:mt-10">
         {campaign && (
-          <div className="flex w-full mx-72 gap-10">
-            <div className="w-2/3 flex flex-col gap-2">
+          <div className="flex md:flex-row flex-col w-full lg:mx-30 xl:mx-72 gap-10">
+            <div className="md:w-2/3 flex flex-col gap-2">
               <img
                 src={SERVER_ENDPOINTS.getImage(campaign.imagePath)}
                 className="w-full max-h-56 object-cover rounded-lg"
@@ -100,7 +100,7 @@ export default function CampaignPage({ params }: { params: { slug: string } }) {
               <h1 className="text-3xl font-semibold">{campaign.title}</h1>
               <p className="text-gray-400">{campaign.description}</p>
             </div>
-            <div className="w-1/3 flex flex-col gap-5">
+            <div className="md:w-1/3 flex flex-col gap-5">
               <div>
                 {campaign.website && (
                   <a

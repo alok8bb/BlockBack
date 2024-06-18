@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${hankenGrotesk.variable} flex h-auto flex-col px-20 font-body pb-5`}
+        className={`${inter.variable} ${hankenGrotesk.variable} flex h-auto flex-col px-5 md:px-20 font-body pb-5`}
       >
         <Toaster position="bottom-right" reverseOrder={false} />
         <WagmiProviderComp initialState={initialState}>
